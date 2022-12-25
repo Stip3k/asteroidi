@@ -1,0 +1,1 @@
+Orodje za iskanje pritisnjenih tipk: https://www.toptal.com/developers/keycode/for/w
