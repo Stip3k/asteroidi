@@ -1,5 +1,5 @@
-let podlaga, last, raketa, meni, tockovnik;
-let visina = 700, sirina = 1000, zivljenja = 3, tocke = 0, temaOz = 'black', temaEl = 'white';
+let podlaga, last, raketa, meni, tockovnik, zvok = new Audio("laser.mp3");
+let visina = 700, sirina = 1000, zivljenja = 3, tocke = 0;
 let tipke = [], asteroidi = [], metki = [], pavza = [[0,0,69]];
 
 class Raketa {
@@ -12,7 +12,7 @@ class Raketa {
         this.hitObrata = 0.001;
         this.radij = 15;
         this.stopinje = 0;
-        this.barva = temaEl;
+        this.barva = 'white';
         this.velX = 0;
         this.velY = 0;
 
@@ -90,6 +90,7 @@ class Metek {
         this.visina = 4;
         this.sirina = 4;
         this.hitrost = 5;
+        this.style = "white"
 
         this.velX = 0;
         this.velY = 0;
@@ -103,7 +104,7 @@ class Metek {
     }
 
     risi() {
-        last.fillStyle = "white";
+        last.fillStyle = this.style;
         last.fillRect(this.x, this.y, this.sirina, this.visina);
     }
 }
@@ -164,11 +165,10 @@ class Meni {
     constructor() {
         this.zacX = sirina/2 - 180;
         this.zacY = visina/2 - 150;
-        this.moznosti = [[0,0,109/*M*/],[0,0,108/*L*/],[0,0,116/*T*/],[0,0,107/*K*/]];
-        this.txt = ['Glasba - M','Tezavnost - L','Theme - T','Scoreboard - K'];
+        this.moznosti = [[1,0,109/*M*/],[1,0,108/*L*/],[0,0,116/*T*/],[1,0,107/*K*/]];
+        this.txt = ['Glasba - M','Infinite play - L','Theme - T','Scoreboard - K'];
         this.vel = 8;
         this.mx = 0;
-        this.my = 0;
     }
 
     risi() {
@@ -179,11 +179,12 @@ class Meni {
 
         this.preveri();
 
+
+        last.fillStyle = 'white';
+        last.font = '30px Atari';
         for (let i = 0; i < 4; i++) {
             //last.moveTo(this.mx,this.my);
 
-            last.fillStyle = 'white';
-            last.font = '30px Atari';
             last.fillText(this.txt[i],(this.zacX+((sirina-2*this.zacX)/8)),(this.my+30));
 
             if (this.moznosti[i][0]) {
@@ -193,8 +194,6 @@ class Meni {
             }
             this.my += 50; 
         }
-
-        last.fillStyle = 'white';
         last.font = '13px Atari';
         last.fillText('Ponastavi igro - R, Premiki rakete - W,A,D, Streljanje - SAPCE',this.zacX+15,(visina-this.zacY-10));
     }
@@ -211,33 +210,46 @@ class Tockovnik {
     constructor() {
         this.zacX = (sirina/3);
         this.zacY = 2*visina/8;
-        this.xvnos = this.zacX + ((sirina-(2*this.zacX))/2-50);
+        this.xvnos = this.zacX + ((sirina-(2*this.zacX))/2);
         this.yvnos = this.zacY + 30;
-        this.imeIg = "Ime igralca";
+        this.imeIg = "Usr";
+        this.tabEl = [];
+        this.ponovi = 0;
     }
 
     risi() {
         last.strokeRect(this.zacX, this.zacY, 2*180, visina-(this.zacX));
         this.vnos();
-        //izpisi();
+        this.izpisi();
     }
 
     vnos() {
         last.fillStyle = "white";
         last.font = '28px Atari';
-        last.fillText("Vnesi ime:", this.xvnos, this.yvnos);
+        last.fillText("Vnesi ime:", this.xvnos - 35, this.yvnos);
         //  ctx.fillText(this.imeIg, canvas.width/2, 200);
 
         if (tipke[92]) {
-            localStorage.setItem(this.imeIg, tocke);
+            if ((this.imeIg != "") && (this.imeIg != "Usr")) {
+                localStorage.setItem(this.imeIg,String(tocke));
+            }
             location.reload();
         } else {
-            last.fillText(this.imeIg, this.xvnos, this.yvnos - 50);
+            last.fillText(this.imeIg, this.xvnos, this.yvnos + 50);
         }
     }
 
     izpisi() {
-        
+        let n = 10, zamik = 20;
+        last.font = '25px Atari';
+        if (n > this.tabEl.length) {
+            n = this.tabEl.length;
+        }
+
+        for (let i = 0; i < n; i++) {
+            let tmp = String(i+1)+". "+String(this.tabEl[i][1])+"-"+this.tabEl[i][0];
+            last.fillText(tmp, this.xvnos - 50, this.yvnos + 100 + (i*zamik));
+        }
     }
 }
 
@@ -260,7 +272,6 @@ function vzpostavi() {
     raketa = new Raketa();
     meni = new Meni()
     tockovnik = new Tockovnik();
-
 
     /*
         Pretvorba e.key String vrednosti v
@@ -286,14 +297,21 @@ function vzpostavi() {
         console.log(tipka);
         tipke[tipka] = true;
         if ((zivljenja == 0) && (tockovnik.imeIg.length < 10)) {
-            tockovnik.imeIg += tipka;
+            if (tipka >= 97) {
+                tockovnik.imeIg += e.key;
+            } else if (tipke[66]) {
+                tockovnik.imeIg = tockovnik.imeIg.slice(0,tockovnik.imeIg.length-1);
+            }
         }
     });
     document.body.addEventListener("keyup", e => {
         tipka = e.key.charCodeAt(0);
         tipke[tipka] = false;
 
-        if(tipka === 32) {
+        if(tipka === 32 && zivljenja > 0) {
+            if (meni.moznosti[0][1]) {
+                zvok.play();
+            }
             metki.push(new Metek(raketa.stopinje));
         }
     });
@@ -302,9 +320,6 @@ function vzpostavi() {
 }
 
 function upodobi() {
-    //w:119, a:97, d:100, space:32;
-    
-
     //Ali je igra na pavzi
     preveriTipke(0,pavza);
     
@@ -342,7 +357,31 @@ function upodobi() {
         last.font = '50px Atari';
         last.fillText("Konec igre!", sirina/2-100, visina/8);
 
-        tockovnik.risi();
+        if (!meni.moznosti[3][1]) { 
+            if (!tockovnik.ponovi) {
+                for (let i = 0; i < localStorage.length; i++) {
+                    let kljuc = localStorage.key(i), tmp = [];
+                    tmp.push(kljuc,localStorage.getItem(kljuc));
+                    tockovnik.tabEl.push(tmp);
+                }
+                console.log(tockovnik.tabEl);
+                tockovnik.tabEl.sort((a,b) => {
+                    if (a[1] === b[1]) {
+                        return 0;
+                    }
+                    else {
+                        return (a[1] > b[1]) ? -1 : 1;
+                    }
+                });
+                console.log(tockovnik.tabEl);
+
+                tockovnik.ponovi = 1;
+            }
+            tockovnik.risi();
+        } else if (tipke[92]) {
+            //localStorage.clear(); //Brisi spomin
+            location.reload();
+        } 
     } else {
 
         /**
@@ -400,6 +439,15 @@ function upodobi() {
                         asteroidi.splice(i, 1);
                         metki.splice(j, 1);
                         tocke += 25;
+                        if (asteroidi.length == 0) {
+                            if (!meni.moznosti[1][1]) {
+                                for (let i = 0; i < 8; i++) {
+                                    asteroidi.push(new Asteroid());
+                                }
+                            } else {
+                                zivljenja = 0;
+                            }
+                        }
                         break loop1;
                     }
                 }
