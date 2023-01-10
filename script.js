@@ -1,6 +1,6 @@
-let podlaga, last, raketa;
-let visina = 700, sirina = 1000, zivljenja = 3, tocke = 0;
-let tipke = [], asteroidi = [], metki = [];
+let podlaga, last, raketa, meni, tockovnik;
+let visina = 700, sirina = 1000, zivljenja = 3, tocke = 0, temaOz = 'black', temaEl = 'white';
+let tipke = [], asteroidi = [], metki = [], pavza = [[0,0,69]];
 
 class Raketa {
     constructor() {
@@ -12,7 +12,7 @@ class Raketa {
         this.hitObrata = 0.001;
         this.radij = 15;
         this.stopinje = 0;
-        this.barva = 'white';
+        this.barva = temaEl;
         this.velX = 0;
         this.velY = 0;
 
@@ -160,12 +160,107 @@ class Asteroid {
     }
 }
 
+class Meni {
+    constructor() {
+        this.zacX = sirina/2 - 180;
+        this.zacY = visina/2 - 150;
+        this.moznosti = [[0,0,109/*M*/],[0,0,108/*L*/],[0,0,116/*T*/],[0,0,107/*K*/]];
+        this.txt = ['Glasba - M','Tezavnost - L','Theme - T','Scoreboard - K'];
+        this.vel = 8;
+        this.mx = 0;
+        this.my = 0;
+    }
+
+    risi() {
+        last.strokeRect(this.zacX,this.zacY,(sirina - 2*this.zacX),(visina - 2*this.zacY));
+
+        this.mx = (this.zacX+6*((sirina-2*this.zacX)/this.vel)),
+        this.my = (this.zacY+((visina-2*this.zacY)/this.vel));
+
+        this.preveri();
+
+        for (let i = 0; i < 4; i++) {
+            //last.moveTo(this.mx,this.my);
+
+            last.fillStyle = 'white';
+            last.font = '30px Atari';
+            last.fillText(this.txt[i],(this.zacX+((sirina-2*this.zacX)/8)),(this.my+30));
+
+            if (this.moznosti[i][0]) {
+                last.fillRect(this.mx,this.my,((sirina-2*this.zacX)/this.vel),((visina-2*this.zacY)/this.vel));
+            } else {
+                last.strokeRect(this.mx,this.my,((sirina-2*this.zacX)/this.vel),((visina-2*this.zacY)/this.vel));
+            }
+            this.my += 50; 
+        }
+
+        last.fillStyle = 'white';
+        last.font = '13px Atari';
+        last.fillText('Ponastavi igro - R, Premiki rakete - W,A,D, Streljanje - SAPCE',this.zacX+15,(visina-this.zacY-10));
+    }
+
+    preveri() {
+        for (let i = 0; i < this.moznosti.length; i++) {
+            preveriTipke(i,this.moznosti);
+            //console.log(this.moznosti);
+        }
+    }
+}
+
+class Tockovnik {
+    constructor() {
+        this.zacX = (sirina/3);
+        this.zacY = 2*visina/8;
+        this.xvnos = this.zacX + ((sirina-(2*this.zacX))/2-50);
+        this.yvnos = this.zacY + 30;
+        this.imeIg = "Ime igralca";
+    }
+
+    risi() {
+        last.strokeRect(this.zacX, this.zacY, 2*180, visina-(this.zacX));
+        this.vnos();
+        //izpisi();
+    }
+
+    vnos() {
+        last.fillStyle = "white";
+        last.font = '28px Atari';
+        last.fillText("Vnesi ime:", this.xvnos, this.yvnos);
+        //  ctx.fillText(this.imeIg, canvas.width/2, 200);
+
+        if (tipke[92]) {
+            localStorage.setItem(this.imeIg, tocke);
+            location.reload();
+        } else {
+            last.fillText(this.imeIg, this.xvnos, this.yvnos - 50);
+        }
+    }
+
+    izpisi() {
+        
+    }
+}
+
+function preveriTipke(i,tab) {
+    if(tipke[tab[i][2]]) {
+        if(tab[i][1]) {
+            tab[i][0] = !tab[i][0];
+            tab[i][1] = 0;
+        }
+    } else {
+        tab[i][1] = 1;
+    }
+}
+
 document.addEventListener("DOMContentLoaded", vzpostavi);
 
 function vzpostavi() {
     podlaga = document.getElementById("podlaga");
     last = podlaga.getContext("2d");
     raketa = new Raketa();
+    meni = new Meni()
+    tockovnik = new Tockovnik();
+
 
     /*
         Pretvorba e.key String vrednosti v
@@ -176,9 +271,6 @@ function vzpostavi() {
     podlaga.height = visina;
     podlaga.width = sirina;
 
-    console.log('sirina '+String(podlaga.width));
-    console.log('visina '+String(podlaga.height));
-
     last.fillStyle = 'black';
     last.fillRect(0,0,podlaga.width,podlaga.height);
 
@@ -187,12 +279,15 @@ function vzpostavi() {
      */
     for (let i = 0; i < 8; i++) {
         asteroidi.push(new Asteroid());
-        
     }
 
     document.body.addEventListener("keydown", e => {
         tipka = e.key.charCodeAt(0);
+        console.log(tipka);
         tipke[tipka] = true;
+        if ((zivljenja == 0) && (tockovnik.imeIg.length < 10)) {
+            tockovnik.imeIg += tipka;
+        }
     });
     document.body.addEventListener("keyup", e => {
         tipka = e.key.charCodeAt(0);
@@ -208,7 +303,11 @@ function vzpostavi() {
 
 function upodobi() {
     //w:119, a:97, d:100, space:32;
+    
 
+    //Ali je igra na pavzi
+    preveriTipke(0,pavza);
+    
     raketa.premika = (tipke[119]);
     if(tipke[100]) {
         raketa.obrat(1);
@@ -232,103 +331,108 @@ function upodobi() {
     last.fillStyle = 'white';
     last.font = '21px Atari';
     last.fillText('Tocke: '+ tocke.toString(),20,35);
-    if(zivljenja <= 0) {
+    
+    kazalecZiv();
+
+    if(pavza[0][0]) {
+        meni.risi();
+    } else if(zivljenja <= 0) {
         raketa.vidno = false;
         last.fillStyle = 'white';
         last.font = '50px Atari';
-        last.fillText("Konec igre!", sirina/2-100, visina/2);
-    }
-    kazalecZiv();
+        last.fillText("Konec igre!", sirina/2-100, visina/8);
 
+        tockovnik.risi();
+    } else {
 
-    /**
-     * Preverja trke rakete z asteroidi
-     */
-    if(asteroidi.length !== 0) {
-        for (let i = 0; i < asteroidi.length; i++) {
-            if(trKrog(raketa.x, raketa.y, 11,
-                        asteroidi[i].x,
-                        asteroidi[i].y,
-                        asteroidi[i].trkRadij)
-            ) {
-                raketa.x = sirina / 2;
-                raketa.y = visina / 2;
-                raketa.velX = 0;
-                raketa.velY = 0;
-                zivljenja -= 1;    
-            }
-            
-        }
-    }
-
-    if(asteroidi.length !== 0 && metki.length != 0) {
-        loop1:
-        for (let i = 0; i < asteroidi.length; i++) {
-            for (let j = 0; j < metki.length; j++) {
-                if(trKrog(metki[j].x,metki[j].y, 3,
+        /**
+         * Preverja trke rakete z asteroidi
+         */
+        if(asteroidi.length !== 0) {
+            for (let i = 0; i < asteroidi.length; i++) {
+                if(trKrog(raketa.x, raketa.y, 11,
                             asteroidi[i].x,
                             asteroidi[i].y,
                             asteroidi[i].trkRadij)
                 ) {
-                    if(asteroidi[i].stopnja === 1) {
-                        asteroidi.push(new Asteroid(
-                            asteroidi[i].x - 5,
-                            asteroidi[i].y - 5,
-                            25, 2, 22
-                        ));
-                        asteroidi.push(new Asteroid(
-                            asteroidi[i].x + 5,
-                            asteroidi[i].y + 5,
-                            25, 2, 22
-                        ));
-                    } else if(asteroidi[i].stopnja === 2) {
-                        asteroidi.push(new Asteroid(
-                            asteroidi[i].x - 5,
-                            asteroidi[i].y - 5,
-                            15, 3, 12
-                        ));
-                        asteroidi.push(new Asteroid(
-                            asteroidi[i].x + 5,
-                            asteroidi[i].y + 5,
-                            15, 3, 12
-                        ));
+                    raketa.x = sirina / 2;
+                    raketa.y = visina / 2;
+                    raketa.velX = 0;
+                    raketa.velY = 0;
+                    zivljenja -= 1;    
+                }
+                
+            }
+        }
+
+        if(asteroidi.length !== 0 && metki.length != 0) {
+            loop1:
+            for (let i = 0; i < asteroidi.length; i++) {
+                for (let j = 0; j < metki.length; j++) {
+                    if(trKrog(metki[j].x,metki[j].y, 3,
+                                asteroidi[i].x,
+                                asteroidi[i].y,
+                                asteroidi[i].trkRadij)
+                    ) {
+                        if(asteroidi[i].stopnja === 1) {
+                            asteroidi.push(new Asteroid(
+                                asteroidi[i].x - 5,
+                                asteroidi[i].y - 5,
+                                25, 2, 22
+                            ));
+                            asteroidi.push(new Asteroid(
+                                asteroidi[i].x + 5,
+                                asteroidi[i].y + 5,
+                                25, 2, 22
+                            ));
+                        } else if(asteroidi[i].stopnja === 2) {
+                            asteroidi.push(new Asteroid(
+                                asteroidi[i].x - 5,
+                                asteroidi[i].y - 5,
+                                15, 3, 12
+                            ));
+                            asteroidi.push(new Asteroid(
+                                asteroidi[i].x + 5,
+                                asteroidi[i].y + 5,
+                                15, 3, 12
+                            ));
+                        }
+                        asteroidi.splice(i, 1);
+                        metki.splice(j, 1);
+                        tocke += 25;
+                        break loop1;
                     }
-                    asteroidi.splice(i, 1);
-                    metki.splice(j, 1);
-                    tocke += 25;
-                    break loop1;
                 }
             }
         }
-    }
 
 
-    if(raketa.vidno) {
-        raketa.posodobi();
-        raketa.risi();
+        if(raketa.vidno) {
+            raketa.posodobi();
+            raketa.risi();
 
+            /**
+             * Najprej posodobi spremneljivke metkov,
+             * potem pa jih narisi.
+             */
+            if(metki.length != 0) {
+                for (let i = 0; i < metki.length; i++) {
+                    metki[i].posodobi();
+                    metki[i].risi();            
+                }
+            }
+        }
         /**
-         * Najprej posodobi spremneljivke metkov,
+         * Najprej posodobi spremneljivke asteroidov,
          * potem pa jih narisi.
          */
-        if(metki.length != 0) {
-            for (let i = 0; i < metki.length; i++) {
-                metki[i].posodobi();
-                metki[i].risi();            
+        if(asteroidi.length != 0) {
+            for (let i = 0; i < asteroidi.length; i++) {
+                asteroidi[i].posodobi();
+                asteroidi[i].risi(i);            
             }
         }
     }
-    /**
-     * Najprej posodobi spremneljivke asteroidov,
-     * potem pa jih narisi.
-     */
-    if(asteroidi.length != 0) {
-        for (let i = 0; i < asteroidi.length; i++) {
-            asteroidi[i].posodobi();
-            asteroidi[i].risi(i);            
-        }
-    }
-
     requestAnimationFrame(upodobi);
 }
 
